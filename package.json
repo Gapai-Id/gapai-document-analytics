@@ -15,8 +15,11 @@
     "electron": "^33.2.0",
     "electron-builder": "^25.1.8"
   },
-  "author": "Gapai",
-  "license": "UNLICENSED",
+  "author": {
+    "name": "Agung Yuliyanto",
+    "url": "https://github.com/agung96tm"
+  },
+  "license": "MIT",
   "private": true,
   "build": {
     "appId": "com.gapai.documentanalytics",
@@ -45,6 +48,7 @@
     "nsis": {
       "oneClick": false,
       "allowToChangeInstallationDirectory": true
-    }
+    },
+    "afterPack": "build/adhoc-sign.js"
   }
 }
