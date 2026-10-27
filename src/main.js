@@ -1,4 +1,4 @@
-const { app, BrowserWindow, ipcMain, dialog, safeStorage, nativeImage } = require('electron');
+const { app, BrowserWindow, ipcMain, dialog, nativeImage } = require('electron');
 const fs = require('fs');
 const path = require('path');
 const { analyze } = require('./analyze');
@@ -15,13 +15,13 @@ function migrateLegacyData() {
   fs.cpSync(legacy, target, { recursive: true });
 }
 
-const DEFAULTS = { provider: 'claude', language: 'en', models: { claude: 'claude-sonnet-5-5', openai: 'gpt-4o' }, keys: {} };
+const DEFAULTS = { provider: 'claude', language: 'en', models: { claude: 'claude-sonnet-5-5', openai: 'gpt-4o' }, apiKeys: {} };
 const configPath = () => path.join(app.getPath('userData'), 'config.json');
 
 function readConfig() {
   try {
     const c = JSON.parse(fs.readFileSync(configPath(), 'utf8'));
-    return { ...DEFAULTS, ...c, models: { ...DEFAULTS.models, ...c.models }, keys: c.keys || {} };
+    return { ...DEFAULTS, ...c, models: { ...DEFAULTS.models, ...c.models }, apiKeys: c.apiKeys || {} };
   } catch {
     return structuredClone(DEFAULTS);
   }
@@ -32,25 +32,10 @@ function writeConfig(c) {
   fs.writeFileSync(configPath(), JSON.stringify(c, null, 2), { mode: 0o600 });
 }
 
-function encrypt(plain) {
-  if (!safeStorage.isEncryptionAvailable()) throw new Error('OS encryption is unavailable; the API key was not saved.');
-  return safeStorage.encryptString(plain).toString('base64');
-}
-
-function decrypt(b64) {
-  return safeStorage.decryptString(Buffer.from(b64, 'base64'));
-}
-
-// A stored key can become unreadable (e.g. after the app was renamed and the Keychain item changed).
-function keyUsable(b64) {
-  if (!b64) return false;
-  try { decrypt(b64); return true; } catch { return false; }
-}
-
 // The renderer never receives the key, only whether one is stored.
 ipcMain.handle('config:get', () => {
   const c = readConfig();
-  return { provider: c.provider, language: c.language, models: c.models, hasKey: { claude: keyUsable(c.keys.claude), openai: keyUsable(c.keys.openai) } };
+  return { provider: c.provider, language: c.language, models: c.models, hasKey: { claude: !!c.apiKeys.claude, openai: !!c.apiKeys.openai } };
 });
 
 ipcMain.handle('config:save', (_e, { provider, language, models, keys }) => {
@@ -59,9 +44,10 @@ ipcMain.handle('config:save', (_e, { provider, language, models, keys }) => {
   c.language = language === 'id' ? 'id' : 'en';
   c.models = { ...c.models, ...models };
   for (const p of ['claude', 'openai']) {
-    if (keys?.[p]) c.keys[p] = encrypt(keys[p].trim());
-    if (keys?.[p] === '') delete c.keys[p];
+    if (keys?.[p]) c.apiKeys[p] = keys[p].trim();
+    if (keys?.[p] === '') delete c.apiKeys[p];
   }
+  delete c.keys; // keys saved by older versions were encrypted with the OS keychain and are no longer used
   writeConfig(c);
   return { ok: true };
 });
@@ -85,9 +71,9 @@ ipcMain.handle('docs:setType', (_e, id, docId, type) => store.setDocType(id, doc
 
 ipcMain.handle('analyze', async (e, { personId, force }) => {
   const c = readConfig();
-  const enc = c.keys[c.provider];
-  if (!keyUsable(enc)) throw new Error(`No usable ${c.provider} API key. Open Settings and enter it again.`);
-  const cfg = { provider: c.provider, key: decrypt(enc), model: c.models[c.provider], lang: c.language };
+  const key = c.apiKeys[c.provider];
+  if (!key) throw new Error(`No ${c.provider} API key set. Open Settings and enter it.`);
+  const cfg = { provider: c.provider, key, model: c.models[c.provider], lang: c.language };
 
   const p = store.getRaw(personId);
   if (p.docs.length < 2) throw new Error('At least 2 documents are required.');
