@@ -1,0 +1,89 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; style-src 'self'; script-src 'self'" />
+  <title>Gapai Document Analytics</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <header>
+    <div class="brand"><img class="logo" src="logo.png" alt="" /><h1>Gapai Document Analytics</h1></div>
+    <button id="openSettings" class="ghost">Settings</button>
+  </header>
+
+  <div class="layout">
+    <aside>
+      <button id="newPerson" class="new-btn"><span>+</span> New folder</button>
+      <div class="side-head"><span>Folders</span></div>
+      <ul id="people"></ul>
+    </aside>
+
+    <main>
+      <section id="empty" class="empty-state">
+        <div class="big">▤</div>
+        <h2>No folder selected</h2>
+        <p>A folder holds all the documents of one subject, so they can be checked against each other.</p>
+        <button id="emptyNew" class="primary">+ New folder</button>
+      </section>
+
+      <section id="person" hidden>
+        <div class="person-head">
+          <h2 id="pname"></h2>
+          <input id="renameInput" class="title-input" type="text" autocomplete="off" hidden />
+          <span class="hint-inline" id="renameHint" hidden>Enter to save · Esc to cancel</span>
+          <button id="rename" class="ghost sm">Rename</button>
+          <button id="del" class="ghost sm danger">Delete</button>
+        </div>
+        <nav class="subtabs">
+          <button class="sub active" data-sub="docs">Documents</button>
+          <button class="sub" data-sub="result">Results <span id="badge"></span></button>
+        </nav>
+
+        <div id="docsTab">
+          <div id="drop" class="drop">
+            <strong>Drop files here</strong> or <button id="pick" class="link">browse</button>
+            <small>PDF, PNG, JPG or WEBP · at least 2 documents to analyze</small>
+          </div>
+          <ul id="files"></ul>
+          <div class="actions">
+            <button id="run" class="primary" disabled>Analyze</button>
+            <button id="rerun" disabled title="Re-read every document instead of only the new ones">Re-read all</button>
+            <span id="status"></span>
+          </div>
+          <div id="error" class="error" hidden></div>
+        </div>
+
+        <div id="resultTab" hidden></div>
+      </section>
+
+      <section id="settings" hidden>
+        <div class="card form">
+          <h2>Settings</h2>
+          <label>Provider
+            <select id="provider"><option value="claude">Claude (Anthropic)</option><option value="openai">OpenAI</option></select>
+          </label>
+          <label>Model
+            <input id="model" type="text" />
+          </label>
+          <label>Result language
+            <select id="language"><option value="en">English</option><option value="id">Bahasa Indonesia</option></select>
+          </label>
+          <label>API key <span id="keyState"></span>
+            <input id="key" type="password" placeholder="Leave empty to keep the current key" autocomplete="off" />
+          </label>
+          <p class="hint">Result language applies to the issue descriptions in the Results tab; run Analyze again to get results in a newly chosen language.</p>
+          <p class="hint">The key is stored encrypted through the OS secure storage (Keychain on macOS) and is only used by the app's main process. Documents are sent directly to the provider you choose.</p>
+          <div class="actions">
+            <button id="save" class="primary">Save</button>
+            <button id="clearKey">Remove key for this provider</button>
+            <button id="closeSettings">Back</button>
+            <span id="saved"></span>
+          </div>
+        </div>
+      </section>
+    </main>
+  </div>
+  <script src="renderer.js"></script>
+</body>
+</html>
